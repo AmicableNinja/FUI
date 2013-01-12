@@ -1,0 +1,33 @@
+<html>
+	<head>
+		<title>Button Detection</title>
+		
+		<script>
+			var messageElem;
+			
+			function start(){
+				messageElem = document.getElementById( "messageLoc" );
+				
+				document.body.addEventListener( 'mousedown', showStuff, false );
+				document.body.addEventListener( 'mouseup', showStuff, false );
+			}
+			
+			function showStuff (event){
+				if( messageElem ){
+					messageElem.innerHTML += event.type + ": " + event.button + " " + event.buttons + " " + event.which + "\n";
+				}
+				
+				if( console.log ){
+					console.log( event.type, event.button, event.buttons, event.which, event );
+				}
+			}
+			
+		</script>
+
+
+	</head>
+	<body onload="start();" style="margin: 0px;background-color:EEEEEE;width:100%;height:100%;">
+	<pre id="messageLoc">Messages: (button, buttons, which)
+</pre>
+	</body>
+</html>

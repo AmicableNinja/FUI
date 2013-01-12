@@ -1,0 +1,32 @@
+<html>
+	<head>
+		<title>Two</title>
+		
+		<script src="../../build/fuiAdapter.js"></script>
+		
+		
+		<script>
+			var adapt;
+			
+			function start(){
+				FUI.debug.level = 11; // all
+				
+				adapt = new FUI.adapter();
+				
+				console.log( adapt.listenOn );
+				
+				adapt.listenOn()
+				     .listenUsing( FUI.drivers.firefox );
+				
+				console.log( adapt.state );
+				
+			}
+			
+		</script>
+
+
+	</head>
+	<body onload="start();" style="margin: 0px;">
+	<!-- <input type="text" value="this field is to test the button functions when entering text" id="abc"/> -->
+	</body>
+</html>

@@ -1,0 +1,39 @@
+<html>
+	<head>
+		<title>Two</title>
+		
+		<script src="../../build/fuiAdapter.js"></script>
+		
+		
+		<script>
+			var adapt;
+			
+			function start(){
+				FUI.debug.level = 11; // all
+				
+				adapt = new FUI.adapter();
+				
+				adapt.listenOn() // defaults to document
+				     .listenUsing( FUI.drivers.browser.firefox )
+				     //.listenFor( new FUI.gesture( "pointermove").and( FUI.BUTTONS_CTRL ) );
+				     .listenFor(
+				           new FUI.gesture()
+				                   .pointer().move()
+				                   .and()
+				                   .button( FUI.BUTTON_CONTROL ).stillDown()
+				                   .or()
+				                   .button( FUI.BUTTON_SHIFT ).down(),
+				           function (event) { console.log("custom event fired", event); }
+				      );
+				     //.listenFor( gesture, callback );
+				
+			}
+			
+		</script>
+
+
+	</head>
+	<body onload="start();" style="margin: 0px;">
+	<!-- <input type="text" value="this field is to test the button functions when entering text" id="abc"/> -->
+	</body>
+</html>

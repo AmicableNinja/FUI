@@ -1,0 +1,179 @@
+<html>
+	<head>
+		<title>Button Detection</title>
+		
+		<script src="../../build/fuiAdapter.js"></script>
+		
+		<script>
+			var messageElem;
+			
+			function start(){
+				messageElem = document.getElementById( "messageLoc" );
+				
+				//document.body.addEventListener( 'keydown', showStuff, false );
+				document.body.addEventListener( 'keyup',   showStuff, false );
+			}
+			
+			var log_benchmarks = false;
+			
+			function showStuff (event){
+				var startTime = Date.now();
+				/*
+				var event = event || {};
+				
+				var toFind = event.keyIdentifier || event.keyCode || event.which;
+				//console.log( "toFind is", toFind, "from", event.keyIdentifier, event.keyCode, event.which);
+				if(toFind[0] == "U"){
+					toFind = parseInt( toFind.slice(2), 16);
+					//console.log( "toFind revised", toFind);
+				}
+				
+				//var matchedConstants = findAllConstantMatches( event.which );
+				
+				var matchedConstants_silly = findAllConstantMatches( sillyTest(event) );
+				//console.log( "matchedConstants_silly", matchedConstants_silly );
+				
+				/*
+				if( messageElem ){
+					messageElem.innerHTML += event.type + ": " + event.which + "(0x" + event.which.toString(16).toUpperCase() + ") " + event.keyIdentifier + " " + event.keyCode + "\n";
+				}
+				
+				if( console.log ){
+					console.log( event.type, event.which + "(0x" + event.which.toString(16).toUpperCase() + ") ", event.keyIdentifier, event.keyCode, matchedConstants, event );
+				}
+				//*/
+				
+				var consts = actuallyFindTheRightKey( event );
+				var names = [];
+				for (var n in consts) {
+					names.push (findAllConstantMatches( consts[n] ) );
+				}
+				console.log( "consts, names", consts, names );
+				if( ! consts ){
+					console.error("value", event.which.toString(16).toUpperCase(), "IS NOT RECOGNIZED!!!");
+				}
+				
+				log_benchmarks ? console.log("showStuff took", Date.now()-startTime) : 0;
+			}
+			
+			var log_actuallyFindTheRightKey = false;
+			function actuallyFindTheRightKey (event) {
+				var startTime = Date.now();
+				var event = event || {};
+				var physicalButtonValue;
+				/* // Bug in Chrome (WebKit): numberpad buttons return letters A through O, original script used keyIdentifier as thought to have higher % accuracy (non en-us keyboards)
+				if( event.keyIdentifier && (event.keyIdentifier.substr(0,2) == "U+")){
+					// unicode value
+					physicalButtonValue = parseInt( event.keyIdentifier.slice(2), 16 );
+					actuallyFindTheRightKey ? console.log( "unicode value", event.keyIdentifier ) : 0;
+				} else {
+					physicalButtonValue = event.keyIdentifier || event.keyCode || event.which;
+					actuallyFindTheRightKey ? console.log( "keyIdentifier,keyCode,which", event.keyIdentifier, event.keyCode, event.which ) : 0;
+				}/*/
+				physicalButtonValue = event.keyCode || event.which;
+				actuallyFindTheRightKey ? console.log( "keyCode,which", event.keyCode, event.which ) : 0;
+				//*/
+				
+				actuallyFindTheRightKey ? console.log( "physicalButtonValue", physicalButtonValue ) : 0;
+				
+				//console.log( "physicalButtonValue", physicalButtonValue );
+				var toReturn;
+				if( FUI.driver.keyboard.prototype.buttonTable[physicalButtonValue] ){
+					toReturn = FUI.driver.keyboard.prototype.buttonTable[physicalButtonValue];
+				}
+				actuallyFindTheRightKey ? console.log( "toReturn", toReturn ) : 0;
+				
+				log_benchmarks ? console.log("actuallyFindTheRightKey took", Date.now()-startTime) : 0;
+				
+				return toReturn;
+			}
+			
+			function findAllConstantMatches (value) {
+				var startTime = Date.now();
+				var matches = [];
+				
+				var buttonConstantsLocation = FUI;//.driver.physicalKeys;
+				for ( var n in buttonConstantsLocation ){
+					if( n.indexOf("BUTTON") >= 0) {
+						switch( typeof buttonConstantsLocation[n] ){
+							case "object":
+								var foundIn = false;
+								for ( var nn in buttonConstantsLocation[n]) {
+									foundIn = (buttonConstantsLocation[n][nn] == value) || foundIn;
+								}
+								if( foundIn ) {
+									matches.push( n );
+								}
+								break;
+							case "number":
+								if( buttonConstantsLocation[n] == value) {
+									matches.push( n );
+								}
+								break;
+						}
+						
+						
+					}
+				}
+				
+				log_benchmarks ? console.log("findAllConstantMatches took", Date.now()-startTime) : 0;
+				// 0-2 ms on Firefox, 3 then 0-1 on Chrome
+				
+				return matches;
+			}
+			
+			var log_sillyTest = false;
+			function sillyTest ( event ){
+				var startTime = Date.now();
+				
+				var found = [];
+				var event = event || {};
+				var toFind = event.keyIdentifier || event.keyCode || event.which;
+				toFind.toLowerCase ? toFind = toFind.toUpperCase() : 0;
+				log_sillyTest ? console.log( "toFind", toFind ) : 0;
+				
+				for (var n in FUI.driver.keyboard.prototype.buttonTable){
+					log_sillyTest ? console.log("looking at",n) : 0;
+					var wasFound = false;
+					for (var nn in FUI.driver.keyboard.prototype.buttonTable[n]){
+						wasFound = wasFound || (FUI.driver.keyboard.prototype.buttonTable[n][nn] == toFind);
+						log_sillyTest ? console.log("looking at",n,FUI.driver.keyboard.prototype.buttonTable[n][nn],"wasFound",wasFound) : 0;
+					}
+					log_sillyTest ? console.log("looking at",n,"wasFound",wasFound) : 0;
+					if ( wasFound ) {
+						found.push( n );
+					}
+				}
+				
+				log_sillyTest ? console.log( "sillyTest: found", found ) : 0;
+				
+				log_benchmarks ? console.log("sillyTest took", Date.now()-startTime) : 0;
+				
+				return found;
+			}
+			
+			function sillyTest_whichKey ( matchesArray ) {
+				var toFind = matchesArray || [];
+				var found = [];
+				var lookIn = FUI;
+				for (var toFind_n in toFind) {
+					for (var lookIn_n in lookIn) {
+						if( lookIn[lookIn_n] == toFind[toFind_n]){
+							found.push( lookIn_n );
+						}
+					}
+				}
+				console.log("sillyTest_whichKey: found", found);
+				return found;
+			}
+			
+		</script>
+
+
+	</head>
+	<body onload="start();" style="margin: 0px;background-color:EEEEEE;width:100%;height:100%;">
+	<pre id="messageLoc">Messages: (which, keyIdentifier, keyCode)
+[not used anymore, see console.log]
+</pre>
+	</body>
+</html>
