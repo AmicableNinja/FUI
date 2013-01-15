@@ -18,7 +18,7 @@ FUI.uRep = function (buttonConstant, toLower) {
 
 //-- build the button translation table --//
 // make the minified version smaller, seems hackish :'(
-//only took the minified version down ~9kb (from 37.206 kb to 28,644 bytes) :S
+//only took the minified version down ~9kb (from 37.206 kb to 28.644 kb) :S
 if( __t1 ){
 	window.__t_ORIG = __t1;
 	__t1 = undefined;

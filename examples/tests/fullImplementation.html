@@ -8,26 +8,43 @@
 		<script>
 			var adapt;
 			
+			var s_bool = new FUI.gbool( [FUI.BUTTON_CONTROL, FUI.BUTTON_SHIFT], [FUI.BUTTON_POINTER_LEFT]);
+			var s_d_btn = { buttons : { "17" : { down : false, location : 262144, timestamp : 237468180 }, lastUpdate : 237468180 }, pointers : {} };
+			var s_d_mouse = { buttons : { }, pointers : { mouse : { "126977" : true, "126978" : false, "126979" : false, "126980" : false, "126981" : false, x : 460, y : 462 }, lastUpdate : 1358211100081 } };
+			var s_d_btnMouse = { buttons : s_d_btn.buttons, pointers : s_d_mouse.pointers };
+			
 			function start(){
-				FUI.debug.level = 11; // all
+				//FUI.debug.level = 0; // all
+				FUI.debug.level = 5;
 				
 				adapt = new FUI.adapter();
 				
 				adapt.listenOn() // defaults to document
 				     .listenUsing( FUI.drivers.browser.firefox )
 				     //.listenFor( new FUI.gesture( "pointermove").and( FUI.BUTTONS_CTRL ) );
+				     //.listenFor(
+				     //      new FUI.sbool( [false, true], [true, false]), 
+				     //      function (event) { console.log("custom event fired, sbool", event); }
+				     // )
 				     .listenFor(
-				           new FUI.gesture()
-				                   .pointer().move()
-				                   .and()
-				                   .button( FUI.BUTTON_CONTROL ).stillDown()
-				                   .or()
-				                   .button( FUI.BUTTON_SHIFT ).down(),
-				           function (event) { console.log("custom event fired", event); }
-				      );
+				    	   s_bool, //new FUI.gbool( [FUI.BUTTON_CONTROL, FUI.BUTTON_SHIFT], [FUI.BUTTON_POINTER_LEFT]), 
+				           function (event) { console.log("custom event fired, sbool", event); }
+				      )
+				     //.listenFor(
+				     //      new FUI.gesture()
+				     //              .pointer().move()
+				     //              .and()
+				     //              .button( FUI.BUTTON_CONTROL ).stillDown()
+				     //              .or()
+				     //              .button( FUI.BUTTON_SHIFT ).down(),
+				     //      function (event) { console.log("custom event fired, gesture", event); }
+				     // )
+				     ;
 				     //.listenFor( gesture, callback );
 				
 			}
+			
+			
 			
 		</script>
 

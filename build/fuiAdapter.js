@@ -7,6 +7,7 @@ var FUI = FUI || { revision : 1 };
 
 // CONSTANTS
 
+//TODO marked for removal
 FUI.TYPE_POINTER                    = 0x1;
 FUI.TYPE_BUTTON                     = 0x2;
 
@@ -23,6 +24,7 @@ FUI.EVENT_DOWN_ALREADY        =    FUI.EVENT_STILL_DOWN;
 FUI.MASK_ALL                      = 0xFFFFFFFF;
 FUI.MASK_BUTTON                   = 0x0001FFFF; // to allow all 4 byte UTF-8 chars (even those not specified by constants) and an extended range
 FUI.MASK_BUTTON_EXTENDED          = 0x00010000;
+FUI.MASK_BUTTON_POINTER           = 0x0001F000;
 FUI.MASK_LOCATION                 = 0x000E0000;
 FUI.MASK_SOURCE                   = 0x00F00000;
 FUI.MASK_EVENT                    = 0x0F000000;
@@ -178,7 +180,9 @@ FUI.BUTTON_GRAVE_ACCENT           =     0x0060; // The ` char Hint: MySQL
 FUI.BUTTON_DELETE                 =     0x007F;  // see note above for BACKSPACE (U+0008)
 // NOT the EURO!! that is 20AC            80  // see http://blogs.msdn.com/b/michkap/archive/2005/10/26/484481.aspx
 
-// TODO add other standard UTF characters found on keyboards (oh, to have a non us-en board...ebay? ;)
+// TODO add other standard UTF characters found on keyboards (oh, to have a non us-en, QWERTY, IBM board...ebay? ;)
+FUI.BUTTON_BLACK_DIAMOND          =     0x25C6; //TODO is this the right glyph for the META key? (see http://en.wikipedia.org/wiki/Meta_key)
+  FUI.BUTTON_META = FUI.BUTTON_BLACK_DIAMOND;
 
 
 
@@ -233,6 +237,16 @@ FUI.BUTTON_EXECUTE                =    0x1002C;  // what  happy  lore
 FUI.BUTTON_CLEAR                  =    0x1002D;
 FUI.BUTTON_SEPARATOR              =    0x1002e;
 
+// Mouse Buttons, reserved for the 11000 range
+FUI.BUTTON_POINTER_               =    0x1F000;
+FUI.BUTTON_POINTER_LEFT           =    0x1F001;
+FUI.BUTTON_POINTER_RIGHT          =    0x1F002;
+FUI.BUTTON_POINTER_MIDDLE         =    0x1F003;
+FUI.BUTTON_POINTER_AUX_A          =    0x1F004;
+FUI.BUTTON_POINTER_AUX_B          =    0x1F005;
+// etc
+
+
 //** Location Specific Buttons **//
 FUI.BUTTON_NUMPAD_0                = FUI.BUTTON_LOCATION_NUMPAD | FUI.BUTTON_0;
 FUI.BUTTON_NUMPAD_1                = FUI.BUTTON_LOCATION_NUMPAD | FUI.BUTTON_1;
@@ -253,6 +267,8 @@ FUI.BUTTON_NUMPAD_FULL_STOP = FUI.BUTTON_NUMPAD_PERIOD = FUI.BUTTON_NUMPAD_COMMA
 
 
 // ---------- ../src/debug/FUI.debug.js ---------- //
+var DEBUG = true;
+
 // make the minifier happy
 window.console = window.console || {
 	info: function () {},
@@ -262,13 +278,13 @@ window.console = window.console || {
 	error: function () {}
 };
 
-FUI.debug = { level : 0 };
+FUI.debug = { level : 10 }; // 0 all, 10 only very important
 
 FUI.debug.log = function ( minLevel, messages) {
-	var level = minLevel || 10;
+	var level = minLevel || 10; // 0 not, 10 very
 	var msgObj = messages || {};
 	
-	if( FUI.debug.level >= level ){
+	if( FUI.debug.level <= level ){
 		window.console.log( msgObj );
 	}
 };
@@ -277,7 +293,7 @@ FUI.debug.error = function ( minLevel, messages) {
 	var level = minLevel || 10;
 	var msgObj = messages || {};
 	
-	if( FUI.debug.level >= level ){
+	if( FUI.debug.level <= level ){
 		window.console.error( msgObj );
 	}
 };
@@ -297,7 +313,7 @@ FUI.gesture = function () {
 FUI.gesture.prototype.__startNewCondition = function () {
 	this.__currentCondition_index = this.conditions.push(this.__currentCondition = {});
 	this.__currentCondition_index -= 1;
-	FUI.debug.log( 10, ["currentCndition index", this.__currentCondition_index] );
+	DEBUG && FUI.debug.log( 10, ["currentCndition index", this.__currentCondition_index] );
 };
 
 FUI.gesture.prototype.__addToCurrentCondition = function ( condition ) {
@@ -424,61 +440,63 @@ FUI.sbool = function (ors, ands) {
 
 FUI.sbool.prototype.evaluate = function (data) {
 	var isTrue = false;
+
 	for (var n in this.ors){
-		switch( typeof this.ors[n]) {
-			case "object":
-				if( this.ors[n].evaluate ){
-					isTrue = this.ors[n].evaluate(data) || isTrue;
-				}else{
-					FUI.debug.error( 10, ["unknown object type, ors", this.ors[n], n, this.ors] );
-				}
-				break;
-			case "undefined":
-				return false;
-				break;
-			case "boolean":
-				isTrue = this.ors[n] || isTrue;
-				break;
-			case "function":
-				isTrue = this.ors[n](data) || isTrue;
-				break;
-			case "number":
-			default:
-				FUI.debug.error( 10, ["not implemented yet, ors", this.ors[n], n, this.ors] );
-				break;
-		}
+		isTrue = FUI.sbool.prototype.evaluate_var( this.ors[n], data ) || isTrue;
+				
+		DEBUG && FUI.debug.log( 10, ["ors", this.ors[n], "isTrue", isTrue, "on n", n] );
 		if( isTrue ){
 			return true;
 		}
 	}
 	
+	if( this.ands.length < 1){
+		DEBUG && FUI.debug.log( 10, ["no ands to test", isTrue, this.ands.length] );
+		return isTrue;
+	}
+	isTrue = true;
+	
 	for( var n in this.ands) {
-		switch( typeof this.ands[n]) {
+		isTrue = FUI.sbool.prototype.evaluate_var( this.ands[n], data ) && isTrue;
+		
+		DEBUG && FUI.debug.log( 10, ["ands", this.ands[n], "isTrue", isTrue, "on n", n] );
+		
+		if ( ! isTrue ){
+			return isTrue;
+		}
+	}
+	
+	
+	return isTrue;
+		
+};
+
+FUI.sbool.prototype.evaluate_var = function ( variable, data ) {
+	
+	switch( typeof variable) {
 		case "object":
-			if( this.ands[n].evaluate ){
-				isTrue = this.ands[n].evaluate(data) && isTrue;
+			if( variable.evaluate ){
+				return variable.evaluate(data);
 			}else{
-				FUI.debug.error( 10, ["unknown object type, ands", this.ands[n], n, this.ands] );
+				FUI.debug.error( 10, ["unknown object type", variable ] );
 			}
 			break;
 		case "undefined":
 			return false;
 			break;
 		case "boolean":
-			isTrue = this.ors[n] && isTrue;
+			return variable;
 			break;
 		case "function":
-			isTrue = this.ors[n](data) && isTrue;
+			return variable.apply(data);
 			break;
 		case "number":
 		default:
-			FUI.debug.error( 10, ["not implemented yet, ands", this.ands[n], n, this.ands] );
+			FUI.debug.error( 10, ["not implemented yet", variable ] );
 			break;
-		}
 	}
 	
-	return isTrue;
-		
+	return false;
 };
 
 //1 or 2 and (3 or 4) and 5 or 6
@@ -496,6 +514,98 @@ var otherNotation_impBool = new FUI.sbool(
 	[false, false],
 	[true, true, new FUI.sbool([false,true])]
 );
+
+var otherNotation_impBool_small = new FUI.sbool([false,true]);
+
+
+
+
+
+
+
+FUI.gbool = FUI.sbool;
+FUI.gbool.prototype = FUI.sbool.prototype;
+
+FUI.gbool.prototype.evaluate = function (data) {
+	DEBUG && FUI.debug.log( 4, ["gbool, data in:", data ] );
+	var isTrue = false;
+
+	for (var n in this.ors){
+		isTrue = isTrue || FUI.sbool.prototype.evaluate_var( this.ors[n], data );
+				
+		DEBUG && FUI.debug.log( 3, ["ors", this.ors[n], "isTrue", isTrue, "on n", n] );
+		if( isTrue ){
+			DEBUG && FUI.debug.log( 3, ["gbool, at least one or found true, breaking" ] );
+			break;
+		}
+	}
+	
+	if( this.ands.length < 1){
+		DEBUG && FUI.debug.log( 3, ["no ands to test", isTrue, this.ands.length] );
+		return isTrue;
+	}
+	//isTrue = true;
+	
+	for( var n in this.ands) {
+		isTrue = isTrue && FUI.sbool.prototype.evaluate_var( this.ands[n], data );
+		
+		DEBUG && FUI.debug.log( 3, ["ands", this.ands[n], "isTrue", isTrue, "on n", n] );
+		
+		if ( ! isTrue ){
+			DEBUG && FUI.debug.log( 3, ["gbool, !isTrue, ret", isTrue ] );
+			return isTrue;
+		}
+	}
+	
+	DEBUG && FUI.debug.log( 4, ["gbool, final return", isTrue ] );
+	return isTrue;
+		
+};
+
+FUI.gbool.prototype.evaluate_var = function ( variable, data ) {
+	
+	switch( typeof variable) {
+		case "object":
+			if( variable.evaluate ){
+				return variable.evaluate(data);
+			}else{
+				FUI.debug.error( 10, ["unknown object type", variable ] );
+			}
+			break;
+		case "undefined":
+			return false;
+			break;
+		case "boolean":
+			return variable;
+			break;
+		case "function":
+			return variable.apply(data);
+			break;
+		case "number":
+			// we've got a button!
+			if ( (variable & FUI.MASK_BUTTON_POINTER) == FUI.MASK_BUTTON_POINTER ) {
+				// mouse
+				var toReturn = data.pointers.mouse ? data.pointers.mouse[variable] : false;
+				DEBUG && FUI.debug.log( 3, ["gbool mouse", variable, data.pointers.mouse ? data.pointers.mouse[variable] : "undefined data.pointers.mouse :(", toReturn ] );
+				
+				return toReturn;
+			} else {
+				// buttons
+				
+				var toReturn = ((data.buttons[variable] != undefined) ?
+							( (data.buttons[variable].down != undefined) ? data.buttons[variable].down : data.buttons[variable] ) :
+						 false);
+				DEBUG && FUI.debug.log( 3, ["gbool buttons", variable, data.buttons[variable], toReturn ] );
+				return toReturn;
+			}
+			break;
+		default:
+			FUI.debug.error( 10, ["not implemented yet", variable, data ] );
+			break;
+	}
+	
+	return false;
+};
 
 
 // ---------- ../src/driver_s/FUI.driver.js ---------- //
@@ -741,6 +851,7 @@ FUI.uRep = function (buttonConstant, toLower) {
 
 //-- build the button translation table --//
 // make the minified version smaller, seems hackish :'(
+//only took the minified version down ~9kb (from 37.206 kb to 28.644 kb) :S
 if( __t1 ){
 	window.__t_ORIG = __t1;
 	__t1 = undefined;
@@ -1016,6 +1127,49 @@ FUI.driver.browser.prototype = {
 	touches : function () {}
 };
 
+FUI.driver.browser.prototype.mouse = function ( event ) {
+	var data = {};
+	
+	data.timestamp = event.timestamp || Date.now();
+	
+	data.pointers = {};
+	data.pointers.mouse = {
+		x : event.clientX, // options: clientX, pageX, layerX
+		y : event.clientY
+	};
+	
+	data[ FUI.BUTTON_CONTROL ] = event.ctrlKey;
+	data[ FUI.BUTTON_ALT ]     = event.altKey;
+	data[ FUI.BUTTON_SHIFT ]   = event.shiftKey;
+	data[ FUI.BUTTON_META ]    = event.metaKey;
+	
+	data.pointers.mouse.buttons = {};
+	if (event.type == 'mouseup' || event.type == 'mousedown') {
+		var upDown = event.type == 'mouseup' ? false : true;
+		var button = event.button;
+		if ( button == undefined ){ button = event.which - 1; }
+		switch (button) {
+			case 0: //left
+				data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ]   = upDown;
+				break;
+			case 1: //middle
+				data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ] = upDown;
+				break;
+			case 2: //right
+				data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_RIGHT ]  = upDown;
+				break;
+			default:
+				FUI.debug.error( 10, ["incorrect button (0,1,2||3):", button, event.button, event.which] );
+				break;
+		}
+		DEBUG && FUI.debug.log( 2, [ "setting data.pointers.mouse.buttons", data.pointers.mouse.buttons ]);
+	}
+	
+	//TODO more data
+	
+	return data;
+};
+
 FUI.driver.browser.prototype.keyboard = function ( event ) {
 	event = event || {};
 	var physicalButtonValue = event.keyCode || event.which;
@@ -1030,6 +1184,7 @@ FUI.driver.browser.prototype.keyboard = function ( event ) {
 	
 	return {
 		buttonCode   : buttonConstVal,
+		timestamp    : event.timestamp || event.timeStamp,
 		rawEventData : event
 	};
 };
@@ -1058,63 +1213,54 @@ FUI.drivers.browser.firefox = new FUI.driver.browser();
 FUI.drivers.browser.firefox.data = {};
 		
 FUI.drivers.browser.firefox.mouse = function ( event ) {
+	var data = FUI.driver.browser.prototype.mouse( event );
 	
-	var data = {};
-	data.extras = {};
-	data.extras.timestamp = Date.now();
-	
-
-	data.pointer = {
-		x : event.clientX, // options: clientX, pageX, layerX
-		y : event.clientY
-	};
+	data.pointers.mouse.dz = data.pointers.mouse.dz || 0;
 	if( event.type == "DOMMouseScroll" ) {
-		data.pointer.dz = -1 * Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
+		data.pointers.mouse.dz = -1 * Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
 	}
 	
-	data.buttons = {};
-	data.buttons.left	= (event.buttons &  1) ? true : false;
-	data.buttons.right	= (event.buttons &  2) ? true : false;
-	data.buttons.middle	= (event.buttons &  4) ? true : false;
-	data.buttons.auxA	= (event.buttons &  8) ? true : false;
-	data.buttons.auxB	= (event.buttons & 16) ? true : false;
-	
-	
-	//data.extras = {};
-	
-	data.extras.keyboard = {
-		ctrl  : event.ctrlKey,
-		alt   : event.altKey,
-		shift : event.shiftKey,
-		meta  : event.metaKey
-	};
+	/* // while Firefox has the superior standard, the implementation is buggy: (v18) holding down middle & releasing (up) left still results in 5 (1||4)
+	data.pointers.mouse.buttons = {};
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ]   = (event.buttons &  1) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_RIGHT ]  = (event.buttons &  2) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ] = (event.buttons &  4) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_A ]  = (event.buttons &  8) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_B ]  = (event.buttons & 16) ? true : false;
+	// but if an mouseup event, these are which were UP, not down!! :S see https://developer.mozilla.org/en-US/docs/DOM/MouseEvent
+	if( event.type == "mouseup" ) {
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ]   = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_RIGHT ]  = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_RIGHT ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ] = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_A ]  = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_A ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_B ]  = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_B ];
+	}
+	DEBUG && FUI.debug.log( 10, ["firefox.mouse, left", data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ], "middle", data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ] ] );
+	//*/
 	
 	if ( event.mozInputSource ) {
 		if ( event.mozInputSource == event.MOZ_SOURCE_MOUSE ) {
-			data.extras.source = FUI.POINTER_SOURCE_MOUSE;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_MOUSE;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_PEN ) {
-			data.extras.source = FUI.POINTER_SOURCE_PEN;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_PEN;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_ERASER ) {
-			data.extras.source = FUI.POINTER_SOURCE_ERASER;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_ERASER;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_CURSOR ) {
-			data.extras.source = FUI.POINTER_SOURCE_CURSOR;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_CURSOR;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_TOUCH ) {
-			data.extras.source = FUI.POINTER_SOURCE_TOUCH;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_TOUCH;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_KEYBOARD ) {
-			data.extras.source = FUI.POINTER_SOURCE_KEYBOARD;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_KEYBOARD;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_UNKNOWN ) {
-			data.extras.source = FUI.POINTER_SOURCE_UNKNOWN;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_UNKNOWN;
 		} else {
-			data.extras.source = FUI.POINTER_SOURCE_UNKNOWN;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_UNKNOWN;
 		}
 	}
 	
 	if ( event.mozPressure !== undefined ){
-		data.extras.pressure = event.mozPressure;
-	}
-	
-	data.extras.timestamp = event.timestamp || data.extras.timestamp;
-	
+		data.pointers.mouse.pressure = event.mozPressure;
+	}	
 	
 	return data;
 };
@@ -1158,35 +1304,34 @@ FUI.adapter = function () {
 	};
 	
 	this.state = {
-		mouse    : null,
-		keyboard : null,
-		touches  : null
+		pointers : null,
+		buttons  : null
 	};
 	
 	
 	this.__driver = null;
 	
 	this.__events = [];
+	this.__lastButtonDown = {};
 	
 	//TODO
 };
 
 FUI.adapter.prototype.listenOn = function(desiredElement){
-	FUI.debug.log( 1, ["listenOn", desiredElement] );
+	DEBUG && FUI.debug.log( 1, ["listenOn", desiredElement] );
 	this.listeningElement = desiredElement || document;
 	
 	this.options  = this.options  || {};
 	this.__driver = this.__driver || FUI.drivers.defaultDriver;
 	
-	this.state.mouse    = this.state.mouse    || new FUI.adapter_mouse();
-	this.state.keyboard = this.state.keyboard || new FUI.adapter_keyboard();
-	this.state.touches  = this.state.touches  || new FUI.adapter_touches();
+	this.state.pointers = this.state.pointers || {};
+	this.state.buttons  = this.state.buttons  || {};
 	
 	// retain scope
 	var that = this;
 	
-	//this.listeningElement.addEventListener( 'mousedown', function(event){that.__listener_mouse_down(event);}, false );
-	//this.listeningElement.addEventListener( 'mouseup',   function(event){that.__listener_mouse_up(event);}, false );
+	this.listeningElement.addEventListener( 'mousedown', function(event){that.__listener_mouse_down(event);}, false );
+	this.listeningElement.addEventListener( 'mouseup',   function(event){that.__listener_mouse_up(event);}, false );
 	//this.listeningElement.addEventListener( 'mousemove', function(event){that.__listener_mouse_move(event);}, false );
 	
 	this.listeningElement.addEventListener( 'mousewheel',     function(event){that.__listener_mouse_scroll(event);}, false );
@@ -1217,7 +1362,7 @@ FUI.adapter.prototype.listenOn = function(desiredElement){
 FUI.adapter.prototype.listenUsing = function (driver) {
 	if (driver instanceof FUI.driver.browser.prototype.constructor) {
 		this.__driver = driver;
-		FUI.debug.log( 10, ["is instanceof", driver, FUI.driver.browser] );
+		DEBUG && FUI.debug.log( 10, ["is instanceof", driver, FUI.driver.browser] );
 	} else if ( driver && FUI.drivers[driver] ) {
 		this.__driver = FUI.drivers[driver];
 	} else {
@@ -1229,25 +1374,27 @@ FUI.adapter.prototype.listenUsing = function (driver) {
 
 FUI.adapter.prototype.listenFor = function ( gesture, callbackFunction ) {
 	
+	// TODO re-enable
+	/*
 	if ( ! gesture || ! callbackFunction ) {
 		FUI.debug.error( 10, ["invalid gesture or callbackFunction", gesture, callbackFunction] );
 		return this;
 	} else if ( ! (gesture instanceof FUI.gesture) || ( "function" != typeof callbackFunction) ) {
 		FUI.debug.error( 10, ["incorrect gesture or callbackFunction", [gesture, (gesture instanceof FUI.gesture)], [callbackFunction, ("function" != typeof callbackFunction)]] );
 		return this;
-	}
+	}//*/
 	
 	this.__events.push({
 		gesture  : gesture,
 		callback : callbackFunction
 	});
 	
-	FUI.debug.log( 3, ["added gesture to stack", this.__events.length, this.__events] );
+	DEBUG && FUI.debug.log( 3, ["added gesture to stack", this.__events.length, this.__events] );
 	
 	return this;
 };
 
-
+// TODO orphaned? marked for removal
 FUI.adapter.prototype.__sendState = function (rawEventDataInput) {
 	
 	var mouse = this.state.mouse;
@@ -1271,31 +1418,42 @@ FUI.adapter.prototype.__sendState = function (rawEventDataInput) {
 FUI.adapter.prototype.__listener_key_up = function(event){
 	var data = this.__listener_driver( event, "keyboard" );
 	data = FUI.driver.browser.prototype.keyboard_postProcess(data);
-	FUI.debug.log( 1, ["listener_button_up fired", data, event ] );
+	this.__lastButtonDown[ data.buttonCode ] = false;
+	DEBUG && FUI.debug.log( 2, ["listener_button_up fired", data, event ] );
+	this.updateState_buttons( data, false );
+	this.gestureCheck();
 	//TODO
 };
 
 FUI.adapter.prototype.__listener_key_down = function(event){
 	var data = this.__listener_driver( event, "keyboard" );
-	data = FUI.driver.browser.prototype.keyboard_postProcess(data);
-	FUI.debug.log( 1, ["listener_button_down fired, ", data, event] );
+	
+	if ( true == this.__lastButtonDown[ data.buttonCode ] ) {
+		//DEBUG && FUI.debug.log( 1, ["listener_button_down rep. fired, ", data, event] );
+	} else {
+		data = FUI.driver.browser.prototype.keyboard_postProcess(data);
+		DEBUG && FUI.debug.log( 2, ["listener_button_down fired, ", data, event] );
+		this.updateState_buttons( data, true );
+		this.gestureCheck();
+		this.__lastButtonDown[ data.buttonCode ] = true;
+	}
 	//TODO
 };
 
 
 FUI.adapter.prototype.__listener_mouse_down = function(event){
-	FUI.debug.log( 1, ["listener_mouse_down fired, ", event] );
+	DEBUG && FUI.debug.log( 2, ["listener_mouse_down fired, ", event] );
 	var data = this.__listener_driver( event, "mouse" );
-	this.state.mouse.fromData( data );
-	FUI.debug.log( 1, ["this.state.mouse", this.state.mouse] );
+	this.updateState_pointers( data, true );
+	this.gestureCheck();
 	//TODO fire events?
 };
 
 FUI.adapter.prototype.__listener_mouse_up = function(event){
-	FUI.debug.log( 1, ["listener_mouse_up fired, ", event] );
+	DEBUG && FUI.debug.log( 2, ["listener_mouse_up fired, ", event] );
 	var data = this.__listener_driver( event, "mouse" );
-	this.state.mouse.fromData( data );
-	FUI.debug.log( 1, ["this.state.mouse", this.state.mouse] );
+	this.updateState_pointers( data, true );
+	this.gestureCheck();
 	//TODO
 };
 
@@ -1308,19 +1466,18 @@ FUI.adapter.prototype.__listener_mouse_move_fire = function(event){
 	if( data == this.lastMoveSync ){
 		return false;
 	}
-	this.state.mouse.fromData( data );
 	
-	FUI.debug.log( 1, ["listener_mouse_move_fire fired, ", event] );
+	DEBUG && FUI.debug.log( 2, ["listener_mouse_move_fire fired, ", event] );
+	this.updateState_pointers( data, true );
+	this.gestureCheck();
 	//TODO
 	
 	this.lastMoveSync = data;
 };
 
 FUI.adapter.prototype.__listener_mouse_scroll = function ( event ) {
-	FUI.debug.log( 1, ["listener_mouse_scroll fired, ", event] );
+	DEBUG && FUI.debug.log( 2, ["listener_mouse_scroll fired, ", event] );
 	var data = this.__listener_driver( event, "mouse" );
-	this.state.mouse.fromData( data );
-	FUI.debug.log( 1, ["this.state.mouse", this.state.mouse] );
 	//TODO
 	
 	
@@ -1330,14 +1487,19 @@ FUI.adapter.prototype.__listener_mouse_scroll = function ( event ) {
 	//var e = window.event || event; // old IE support
 	//e.delta = -1 * Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
 	
-	//FUI.debug.log( 1, ["scrolled!", e, e.delta, (e.wheelDelta || -e.detail)] );
-	//FUI.debug.log( 1, [this.lastScroll = this.__listener_driver( event, "mouse" )] );
+	//DEBUG && FUI.debug.log( 1, ["scrolled!", e, e.delta, (e.wheelDelta || -e.detail)] );
+	//DEBUG && FUI.debug.log( 1, [this.lastScroll = this.__listener_driver( event, "mouse" )] );
 	
 	// this is temporary, just to allow basic 3rd axis navigation
 	//this.__pointerEvent("scroll", "all", e);
+	
+	this.updateState_pointers( data, true );
+	this.gestureCheck();
 };
 
 FUI.adapter.prototype.__listener_driver = function (event, deviceType) {
+	
+	//event.timestamp = event.timestamp || Date.now();
 	
 	if ( this.__driver ) {
 		if ( ! deviceType || ! this.__driver [deviceType] ) {
@@ -1352,132 +1514,73 @@ FUI.adapter.prototype.__listener_driver = function (event, deviceType) {
 	return false;
 };
 
-
-// ---------- ../src/adapter/FUI.adapter_touches.js ---------- //
-FUI.adapter_touches = function () {
-	this.touches = [];
-	//TODO
-};
-
-FUI.adapter_touches.prototype.getPointers = function () {
-	return this.touches;
-};
-
-
-// ---------- ../src/adapter/FUI.adapter_keyboard.js ---------- //
-FUI.adapter_keyboard = function () {
+FUI.adapter.prototype.updateState_pointers = function ( data, isMouse ) {
+	DEBUG && FUI.debug.log( 2, [ "updateState_pointers", data ] );
 	
-	this.buttons = {};
-	//TODO
-};
-
-FUI.adapter_keyboard.prototype.getButtons = function () {
-	return this.buttons;
-};
-
-FUI.adapter_keyboard.prototype.down = function ( button ) {
-	return this.buttons[ button ] = Date.now();
-};
-
-FUI.adapter_keyboard.prototype.up = function ( button ) {
-	delete this.buttons[ button ];
-};
-
-
-
-// button or pointer
-FUI.fui = function (type, which, events, location, source) {
+	this.state.pointers.lastUpdate = data.timestamp;
 	
-	this.which = which || 0x0;
+	//this.state.pointers.mouse = this.state.pointers.mouse || isMouse;
+	var ref = null;
+	if ( isMouse ) {
+		ref = ( this.state.pointers["mouse"] = this.state.pointers.mouse || {} );
+	}else{
+		ref = this.state.pointers[ data.identifier ];
+	}
 	
-	this.type = type || 0x0; // button or pointer
+	for( var n in data.pointers ) {
+		var curPnt = data.pointers[ n ];
+		if ( curPnt.dz ) { ref.z += curPnt.dz; }
 	
-	this.events = events || [];
-	
-	this.location = location || 0x0;
-	
-	this.source = source || 0x0;
-	
-};
-
-FUI.fui.prototype.evaluateFromState = function (stateData) {
-	FUI.debug.error( 10, ["not implemented yet (evaluateFromState)", this] );
-	return false;
-};
-
-FUI.fui.prototype.evaluate = function (data) {
-	return this.evaluateFromState( data );
-};
-
-var fui_button_O = new FUI.fui( FUI.TYPE_BUTTON, FUI.BUTTON_O, [FUI.EVENT_DOWN, FUI.EVENT_STILL_DOWN] );
-var fui_button_6_all = new FUI.fui( FUI.TYPE_BUTTON, FUI.BUTTON_6, [FUI.EVENT_DOWN, FUI.EVENT_STILL_DOWN], FUI.BUTTON_LOCATION_ALL );
-var fui_button_3_numpad = new FUI.fui( FUI.TYPE_BUTTON, FUI.BUTTON_3, [FUI.EVENT_DOWN, FUI.EVENT_STILL_DOWN], FUI.BUTTON_LOCATION_NUMPAD );
-
-var fui_sbool = new FUI.sbool( [ fui_button_O, fui_button_6_all, fui_button_3_numpad ] );
-
-
-// ---------- ../src/adapter/FUI.adapter_mouse.js ---------- //
-FUI.adapter_mouse = function () {
-	
-	this.currentState = {};
-	//TODO
-};
-
-FUI.adapter_mouse.prototype.getPointer = function () {
-	//TODO
-	/*
-	return {
-		pointer : this.currentState.pointer ?
-			{
-				x : this.currentState.pointer.x,
-				y : this.currentState.pointer.y
-			} : false,
-		buttons : this.currentState.buttons ?  
-			{
-				left   : false,
-				right  : false,
-				middle : false
-			} : false
-	};//*/
-	return this.currentState;
-};
-
-FUI.adapter_mouse.prototype.fromData = function ( data ) {
-	
-	FUI.debug.log( 10, ["data is", data] );
-	for ( var n in data.buttons ) {
-		if( data.buttons[n] ) {
-			this.down( n );
-		} else {
-			this.up( n );
+		if ( curPnt.x  ) { ref.x  = curPnt.x;  }
+		if ( curPnt.y  ) { ref.y  = curPnt.y;  }
+		if ( curPnt.z  ) { ref.z  = curPnt.z;  }
+		
+		for (var n in curPnt.buttons){
+			DEBUG && FUI.debug.log( 1, ["n & FUI.MASK_BUTTON_POINTER) == FUI.MASK_BUTTON_POINTER", (n+" & "+FUI.MASK_BUTTON_POINTER+") == "+FUI.MASK_BUTTON_POINTER), ((n & FUI.MASK_BUTTON_POINTER) == FUI.MASK_BUTTON_POINTER)]);
+			if ( (n & FUI.MASK_BUTTON_POINTER) == FUI.MASK_BUTTON_POINTER ) {
+				ref[n] = curPnt.buttons[n];
+			}else{
+				this.state.buttons[n] = curPnt.buttons[n];
+			}
 		}
 	}
 	
-	if( data.pointer ){
-		this.move( data.pointer.x, data.pointer.y, data.pointer.z );
-	}
-};
-
-FUI.adapter_mouse.prototype.down = function ( button ) {
-	this.currentState.buttons = this.currentState.buttons || {};
-	this.currentState.buttons[button] = true;
-};
-
-FUI.adapter_mouse.prototype.up = function ( button ) {
-	this.currentState.buttons = this.currentState.buttons || {};
-	//TODO above line needed?
-	this.currentState.buttons[button] = false;
-};
-
-FUI.adapter_mouse.prototype.move = function ( newX, newY, dZ ) {
+	if ( data[ FUI.BUTTON_CONTROL ] != undefined ) { this.state.buttons[ FUI.BUTTON_CONTROL ] =  { down: data[ FUI.BUTTON_CONTROL ], timestamp: data.timestamp }; }
+	if ( data[ FUI.BUTTON_ALT ]     != undefined ) { this.state.buttons[ FUI.BUTTON_ALT ]     =  { down: data[ FUI.BUTTON_ALT ]    , timestamp: data.timestamp }; }
+	if ( data[ FUI.BUTTON_SHIFT ]   != undefined ) { this.state.buttons[ FUI.BUTTON_SHIFT ]   =  { down: data[ FUI.BUTTON_SHIFT ]  , timestamp: data.timestamp }; }
+	if ( data[ FUI.BUTTON_META ]    != undefined ) { this.state.buttons[ FUI.BUTTON_META ]    =  { down: data[ FUI.BUTTON_META ]   , timestamp: data.timestamp }; }
 	
-	this.currentState.pointer = this.currentState.pointer || {};
-	this.currentState.pointer.x = newX;
-	this.currentState.pointer.y = newY;
-	if (dZ) {
-		this.currentState.pointer.dz = dZ;
+	//TODO
+};
+
+FUI.adapter.prototype.updateState_buttons = function ( data, buttonDown ) {
+	DEBUG && FUI.debug.log( 2, [ "updateState_buttons", data ] );
+	
+	this.state.buttons.lastUpdate = data.timestamp;
+	
+	this.state.buttons[ data.buttonCode ] = {
+		down      : buttonDown,
+		timestamp : data.timestamp,
+		location  : data.location
+	};
+	
+	DEBUG && FUI.debug.log( 1, [ "updateState_buttons", data, this.state.buttons ] );
+	//TODO
+};
+
+FUI.adapter.prototype.gestureCheck = function () {
+	//TODO
+	DEBUG && FUI.debug.log( 10, [ "gestureCheck", this.__events, this.state ] );
+	for (var n in this.__events) {
+		if( this.__events[n].gesture.evaluate ) {
+			if( this.__events[n].gesture.evaluate(this.state) ) {
+				var res = this.__events[n].callback();
+				DEBUG && FUI.debug.log( 8, [n, "callback res", res] );
+			}
+		}else{
+			FUI.debug.error( 10, ["unknown gesture type", this.__events[n].gesture] );
+		}
 	}
-	 
 };
 
 

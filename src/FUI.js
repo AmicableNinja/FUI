@@ -6,6 +6,7 @@ var FUI = FUI || { revision : 1 };
 
 // CONSTANTS
 
+//TODO marked for removal
 FUI.TYPE_POINTER                    = 0x1;
 FUI.TYPE_BUTTON                     = 0x2;
 
@@ -22,6 +23,7 @@ FUI.EVENT_DOWN_ALREADY        =    FUI.EVENT_STILL_DOWN;
 FUI.MASK_ALL                      = 0xFFFFFFFF;
 FUI.MASK_BUTTON                   = 0x0001FFFF; // to allow all 4 byte UTF-8 chars (even those not specified by constants) and an extended range
 FUI.MASK_BUTTON_EXTENDED          = 0x00010000;
+FUI.MASK_BUTTON_POINTER           = 0x0001F000;
 FUI.MASK_LOCATION                 = 0x000E0000;
 FUI.MASK_SOURCE                   = 0x00F00000;
 FUI.MASK_EVENT                    = 0x0F000000;
@@ -177,7 +179,9 @@ FUI.BUTTON_GRAVE_ACCENT           =     0x0060; // The ` char Hint: MySQL
 FUI.BUTTON_DELETE                 =     0x007F;  // see note above for BACKSPACE (U+0008)
 // NOT the EURO!! that is 20AC            80  // see http://blogs.msdn.com/b/michkap/archive/2005/10/26/484481.aspx
 
-// TODO add other standard UTF characters found on keyboards (oh, to have a non us-en board...ebay? ;)
+// TODO add other standard UTF characters found on keyboards (oh, to have a non us-en, QWERTY, IBM board...ebay? ;)
+FUI.BUTTON_BLACK_DIAMOND          =     0x25C6; //TODO is this the right glyph for the META key? (see http://en.wikipedia.org/wiki/Meta_key)
+  FUI.BUTTON_META = FUI.BUTTON_BLACK_DIAMOND;
 
 
 
@@ -231,6 +235,16 @@ FUI.BUTTON_SELECT                 =    0x1002B;  // ahh, days of yore
 FUI.BUTTON_EXECUTE                =    0x1002C;  // what  happy  lore
 FUI.BUTTON_CLEAR                  =    0x1002D;
 FUI.BUTTON_SEPARATOR              =    0x1002e;
+
+// Mouse Buttons, reserved for the 11000 range
+FUI.BUTTON_POINTER_               =    0x1F000;
+FUI.BUTTON_POINTER_LEFT           =    0x1F001;
+FUI.BUTTON_POINTER_RIGHT          =    0x1F002;
+FUI.BUTTON_POINTER_MIDDLE         =    0x1F003;
+FUI.BUTTON_POINTER_AUX_A          =    0x1F004;
+FUI.BUTTON_POINTER_AUX_B          =    0x1F005;
+// etc
+
 
 //** Location Specific Buttons **//
 FUI.BUTTON_NUMPAD_0                = FUI.BUTTON_LOCATION_NUMPAD | FUI.BUTTON_0;

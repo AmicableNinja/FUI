@@ -3,63 +3,54 @@ FUI.drivers.browser.firefox = new FUI.driver.browser();
 FUI.drivers.browser.firefox.data = {};
 		
 FUI.drivers.browser.firefox.mouse = function ( event ) {
+	var data = FUI.driver.browser.prototype.mouse( event );
 	
-	var data = {};
-	data.extras = {};
-	data.extras.timestamp = Date.now();
-	
-
-	data.pointer = {
-		x : event.clientX, // options: clientX, pageX, layerX
-		y : event.clientY
-	};
+	data.pointers.mouse.dz = data.pointers.mouse.dz || 0;
 	if( event.type == "DOMMouseScroll" ) {
-		data.pointer.dz = -1 * Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
+		data.pointers.mouse.dz = -1 * Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
 	}
 	
-	data.buttons = {};
-	data.buttons.left	= (event.buttons &  1) ? true : false;
-	data.buttons.right	= (event.buttons &  2) ? true : false;
-	data.buttons.middle	= (event.buttons &  4) ? true : false;
-	data.buttons.auxA	= (event.buttons &  8) ? true : false;
-	data.buttons.auxB	= (event.buttons & 16) ? true : false;
-	
-	
-	//data.extras = {};
-	
-	data.extras.keyboard = {
-		ctrl  : event.ctrlKey,
-		alt   : event.altKey,
-		shift : event.shiftKey,
-		meta  : event.metaKey
-	};
+	/* // while Firefox has the superior standard, the implementation is buggy: (v18) holding down middle & releasing (up) left still results in 5 (1||4)
+	data.pointers.mouse.buttons = {};
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ]   = (event.buttons &  1) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_RIGHT ]  = (event.buttons &  2) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ] = (event.buttons &  4) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_A ]  = (event.buttons &  8) ? true : false;
+	data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_B ]  = (event.buttons & 16) ? true : false;
+	// but if an mouseup event, these are which were UP, not down!! :S see https://developer.mozilla.org/en-US/docs/DOM/MouseEvent
+	if( event.type == "mouseup" ) {
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ]   = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_RIGHT ]  = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_RIGHT ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ] = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_A ]  = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_A ];
+		data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_B ]  = ! data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_AUX_B ];
+	}
+	DEBUG && FUI.debug.log( 10, ["firefox.mouse, left", data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_LEFT ], "middle", data.pointers.mouse.buttons[ FUI.BUTTON_POINTER_MIDDLE ] ] );
+	//*/
 	
 	if ( event.mozInputSource ) {
 		if ( event.mozInputSource == event.MOZ_SOURCE_MOUSE ) {
-			data.extras.source = FUI.POINTER_SOURCE_MOUSE;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_MOUSE;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_PEN ) {
-			data.extras.source = FUI.POINTER_SOURCE_PEN;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_PEN;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_ERASER ) {
-			data.extras.source = FUI.POINTER_SOURCE_ERASER;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_ERASER;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_CURSOR ) {
-			data.extras.source = FUI.POINTER_SOURCE_CURSOR;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_CURSOR;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_TOUCH ) {
-			data.extras.source = FUI.POINTER_SOURCE_TOUCH;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_TOUCH;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_KEYBOARD ) {
-			data.extras.source = FUI.POINTER_SOURCE_KEYBOARD;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_KEYBOARD;
 		} else if ( event.mozInputSource == event.MOZ_SOURCE_UNKNOWN ) {
-			data.extras.source = FUI.POINTER_SOURCE_UNKNOWN;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_UNKNOWN;
 		} else {
-			data.extras.source = FUI.POINTER_SOURCE_UNKNOWN;
+			data.pointers.mouse.source = FUI.POINTER_SOURCE_UNKNOWN;
 		}
 	}
 	
 	if ( event.mozPressure !== undefined ){
-		data.extras.pressure = event.mozPressure;
-	}
-	
-	data.extras.timestamp = event.timestamp || data.extras.timestamp;
-	
+		data.pointers.mouse.pressure = event.mozPressure;
+	}	
 	
 	return data;
 };

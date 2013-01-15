@@ -11,7 +11,7 @@ FUI.gesture = function () {
 FUI.gesture.prototype.__startNewCondition = function () {
 	this.__currentCondition_index = this.conditions.push(this.__currentCondition = {});
 	this.__currentCondition_index -= 1;
-	FUI.debug.log( 10, ["currentCndition index", this.__currentCondition_index] );
+	DEBUG && FUI.debug.log( 10, ["currentCndition index", this.__currentCondition_index] );
 };
 
 FUI.gesture.prototype.__addToCurrentCondition = function ( condition ) {
@@ -138,61 +138,63 @@ FUI.sbool = function (ors, ands) {
 
 FUI.sbool.prototype.evaluate = function (data) {
 	var isTrue = false;
+
 	for (var n in this.ors){
-		switch( typeof this.ors[n]) {
-			case "object":
-				if( this.ors[n].evaluate ){
-					isTrue = this.ors[n].evaluate(data) || isTrue;
-				}else{
-					FUI.debug.error( 10, ["unknown object type, ors", this.ors[n], n, this.ors] );
-				}
-				break;
-			case "undefined":
-				return false;
-				break;
-			case "boolean":
-				isTrue = this.ors[n] || isTrue;
-				break;
-			case "function":
-				isTrue = this.ors[n](data) || isTrue;
-				break;
-			case "number":
-			default:
-				FUI.debug.error( 10, ["not implemented yet, ors", this.ors[n], n, this.ors] );
-				break;
-		}
+		isTrue = FUI.sbool.prototype.evaluate_var( this.ors[n], data ) || isTrue;
+				
+		DEBUG && FUI.debug.log( 10, ["ors", this.ors[n], "isTrue", isTrue, "on n", n] );
 		if( isTrue ){
 			return true;
 		}
 	}
 	
+	if( this.ands.length < 1){
+		DEBUG && FUI.debug.log( 10, ["no ands to test", isTrue, this.ands.length] );
+		return isTrue;
+	}
+	isTrue = true;
+	
 	for( var n in this.ands) {
-		switch( typeof this.ands[n]) {
+		isTrue = FUI.sbool.prototype.evaluate_var( this.ands[n], data ) && isTrue;
+		
+		DEBUG && FUI.debug.log( 10, ["ands", this.ands[n], "isTrue", isTrue, "on n", n] );
+		
+		if ( ! isTrue ){
+			return isTrue;
+		}
+	}
+	
+	
+	return isTrue;
+		
+};
+
+FUI.sbool.prototype.evaluate_var = function ( variable, data ) {
+	
+	switch( typeof variable) {
 		case "object":
-			if( this.ands[n].evaluate ){
-				isTrue = this.ands[n].evaluate(data) && isTrue;
+			if( variable.evaluate ){
+				return variable.evaluate(data);
 			}else{
-				FUI.debug.error( 10, ["unknown object type, ands", this.ands[n], n, this.ands] );
+				FUI.debug.error( 10, ["unknown object type", variable ] );
 			}
 			break;
 		case "undefined":
 			return false;
 			break;
 		case "boolean":
-			isTrue = this.ors[n] && isTrue;
+			return variable;
 			break;
 		case "function":
-			isTrue = this.ors[n](data) && isTrue;
+			return variable.apply(data);
 			break;
 		case "number":
 		default:
-			FUI.debug.error( 10, ["not implemented yet, ands", this.ands[n], n, this.ands] );
+			FUI.debug.error( 10, ["not implemented yet", variable ] );
 			break;
-		}
 	}
 	
-	return isTrue;
-		
+	return false;
 };
 
 //1 or 2 and (3 or 4) and 5 or 6
@@ -210,3 +212,95 @@ var otherNotation_impBool = new FUI.sbool(
 	[false, false],
 	[true, true, new FUI.sbool([false,true])]
 );
+
+var otherNotation_impBool_small = new FUI.sbool([false,true]);
+
+
+
+
+
+
+
+FUI.gbool = FUI.sbool;
+FUI.gbool.prototype = FUI.sbool.prototype;
+
+FUI.gbool.prototype.evaluate = function (data) {
+	DEBUG && FUI.debug.log( 4, ["gbool, data in:", data ] );
+	var isTrue = false;
+
+	for (var n in this.ors){
+		isTrue = isTrue || FUI.sbool.prototype.evaluate_var( this.ors[n], data );
+				
+		DEBUG && FUI.debug.log( 3, ["ors", this.ors[n], "isTrue", isTrue, "on n", n] );
+		if( isTrue ){
+			DEBUG && FUI.debug.log( 3, ["gbool, at least one or found true, breaking" ] );
+			break;
+		}
+	}
+	
+	if( this.ands.length < 1){
+		DEBUG && FUI.debug.log( 3, ["no ands to test", isTrue, this.ands.length] );
+		return isTrue;
+	}
+	//isTrue = true;
+	
+	for( var n in this.ands) {
+		isTrue = isTrue && FUI.sbool.prototype.evaluate_var( this.ands[n], data );
+		
+		DEBUG && FUI.debug.log( 3, ["ands", this.ands[n], "isTrue", isTrue, "on n", n] );
+		
+		if ( ! isTrue ){
+			DEBUG && FUI.debug.log( 3, ["gbool, !isTrue, ret", isTrue ] );
+			return isTrue;
+		}
+	}
+	
+	DEBUG && FUI.debug.log( 4, ["gbool, final return", isTrue ] );
+	return isTrue;
+		
+};
+
+FUI.gbool.prototype.evaluate_var = function ( variable, data ) {
+	
+	switch( typeof variable) {
+		case "object":
+			if( variable.evaluate ){
+				return variable.evaluate(data);
+			}else{
+				FUI.debug.error( 10, ["unknown object type", variable ] );
+			}
+			break;
+		case "undefined":
+			return false;
+			break;
+		case "boolean":
+			return variable;
+			break;
+		case "function":
+			return variable.apply(data);
+			break;
+		case "number":
+			// we've got a button!
+			if ( (variable & FUI.MASK_BUTTON_POINTER) == FUI.MASK_BUTTON_POINTER ) {
+				// mouse
+				var toReturn = data.pointers.mouse ? data.pointers.mouse[variable] : false;
+				DEBUG && FUI.debug.log( 3, ["gbool mouse", variable, data.pointers.mouse ? data.pointers.mouse[variable] : "undefined data.pointers.mouse :(", toReturn ] );
+				
+				return toReturn;
+			} else {
+				// buttons
+				
+				var toReturn = ((data.buttons[variable] != undefined) ?
+							( (data.buttons[variable].down != undefined) ? data.buttons[variable].down : data.buttons[variable] ) :
+						 false);
+				DEBUG && FUI.debug.log( 3, ["gbool buttons", variable, data.buttons[variable], toReturn ] );
+				return toReturn;
+			}
+			break;
+		default:
+			FUI.debug.error( 10, ["not implemented yet", variable, data ] );
+			break;
+	}
+	
+	return false;
+};
